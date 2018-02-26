@@ -46,7 +46,9 @@ def GetQuestionIndexlist(url,headers):
 
 
         question_list = zip(title,category,question_link,ask_number,create_date)
+        print(question_list)
         return(question_list)
+
     except:
         print('******页面信息获取失败 链接：%s'% url)
         WriteDate(url + '\n','FailedPageLinklist.txt')
@@ -193,12 +195,13 @@ def GetLawyer(url,headers):
         if type_value == 5:
             print(url)
             lawyer_name = html.xpath('//div[@class="right"]/p/a/span/text()')
-            mobile_phone = [html.xpath('//div[@class="right"]/p/span/text()')[1],
-                            html.xpath('//div[@class="right"]/p/span/text()')[4],
-                            html.xpath('//div[@class="right"]/p/span/text()')[7]]
-            lawyer_license = [html.xpath('//div[@class="right"]/p/span/text()')[2],
-                           html.xpath('//div[@class="right"]/p/span/text()')[5],
-                           html.xpath('//div[@class="right"]/p/span/text()')[8]]
+            lawyer_num = len(lawyer_name)
+            mobile_phone = []
+            for each in range(lawyer_num):
+                mobile_phone.append(html.xpath('//div[@class="right"]/p/span/text()')[each*3 + 1])
+            lawyer_license = []
+            for each in range(lawyer_num):
+                lawyer_license.append(html.xpath('//div[@class="right"]/p/span/text()')[each*3 + 2])
             lawyer_linklist = html.xpath('//div[@class="right"]/p/a[@class="name"]/@href')
 
             tpye_values = []
@@ -225,6 +228,8 @@ def main():
     question_list = GetQuestionIndexlist(url,random.choice(HEADERS))
     question_links = []
     for each in question_list:
+        if each[3] == u'0个':
+            break
         question_links.append(each[2])
     print(len(question_links))
 
