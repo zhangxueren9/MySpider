@@ -3,6 +3,8 @@ import sys
 import time
 import random
 import requests
+import json
+import codecs
 from lxml import etree
 
 HEADERS = [{'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 '
@@ -129,7 +131,7 @@ def GetLawyer(url,headers):
                          html.xpath('//div[@class="left"]/div[@class="row"]/div[@class="desc-box"]/p[1]/text()')[0] + \
                          u'##' + html.xpath('//div[@class="left"]/div[@class="row row2"]/p[3]/text()')[0]
             lawyer_license = u'执业证号：' + html.xpath('//div[@class="left"]/div[@class="row row2"]/p[1]/text()')[0]
-            lawyer_info = [type_value, lawyer_name, mobile_phone, law_office, law_adress, lawyer_license]
+            lawyer_info = [type_value,[type_value, lawyer_name, mobile_phone, law_office, law_adress, lawyer_license]]
             return (lawyer_info)
 
         #type1获取律师信息 http://guoqian.findlaw.cn/lawyer/onlinelawyer.html
@@ -142,7 +144,8 @@ def GetLawyer(url,headers):
             lawyer_license = html.xpath('//div[@class="aside-bd aside-contact"]/p[2]/text()')[0]
             office_phone = html.xpath('//div[@class="aside-bd aside-contact"]/p[3]/text()')[0]
 
-            lawyer_info = [type_value,lawyer_name,mobile_phone,email,law_office,law_adress,lawyer_license,office_phone]
+            lawyer_info = [type_value,[type_value,lawyer_name,mobile_phone,email,law_office,
+                                       law_adress,lawyer_license,office_phone]]
             return(lawyer_info)
 
         #type2获取律师信息 http://wanggenyu.findlaw.cn/lawyer/onlinelawyer.html
@@ -159,7 +162,8 @@ def GetLawyer(url,headers):
             lawyer_license_info = html.xpath('//div[@class="col-w-8"]/div[@class="common-container"][2]'
                                              '/div[@class="profile_auth"]/div[@class="p_table"]'
                                              '/div[@class="table_item"]/span/text()')
-            lawyer_info = [type_value,lawyer_name,mobile_phone,email,law_office,law_adress] + lawyer_license_info
+            lawyer_info = [type_value,[type_value,lawyer_name,mobile_phone,email,law_office,law_adress]
+                                       + lawyer_license_info]
             return(lawyer_info)
 
         # type3获取律师信息 http://jz_baixuelawyer.findlaw.cn/lawyer/onlinelawyer.html
@@ -176,7 +180,8 @@ def GetLawyer(url,headers):
                                       '/div[@class="inlawyer"][1]/text()[6]')[0]
             lawyer_license = u'执业证号：' + html.xpath('//div[@class="in_info_rg"]/div[@class="conts"]'
                                         '/div[@class="inlawyer"][1]/text()[4]')[0]
-            lawyer_info = [type_value, lawyer_name, mobile_phone, law_office, law_adress, lawyer_license,office_phone]
+            lawyer_info = [type_value,[type_value, lawyer_name, mobile_phone, law_office, law_adress,
+                                       lawyer_license,office_phone]]
             return (lawyer_info)
 
         # type4获取律师信息 http://jz_baixuelawyer.findlaw.cn/lawyer/onlinelawyer.html
@@ -188,7 +193,8 @@ def GetLawyer(url,headers):
             law_adress = u'所属地区：' + html.xpath('//div[@class="left_top_one"]/text()[1]')[0]
             office_phone = html.xpath('//div[@class="left_top_two cl"]/text()[4]')[0]
             lawyer_license =  html.xpath('//div[@class="left_top_two cl"]/text()[2]')[0]
-            lawyer_info = [type_value, lawyer_name, mobile_phone, law_office, law_adress, lawyer_license,office_phone]
+            lawyer_info = [type_value,[type_value, lawyer_name, mobile_phone, law_office, law_adress,
+                                       lawyer_license,office_phone]]
             return (lawyer_info)
 
         # type5获取律师信息 http://zhangxiuqing.findlaw.cn/
@@ -218,36 +224,38 @@ def GetLawyer(url,headers):
         WriteDate(url, 'FailedLawyerlist.txt')
 '''
 def WriteDate(content,filename):
-    with open(filename,'a+') as f:
+    with codecs.open(filename,'a+',encoding= "utf-8") as f:
         f.write(content)
 
 def main():
 
-    url = 'http://china.findlaw.cn/ask/d201801_t00_page40/'
+
     url2 = '/lawyer/onlinelawyer.html'
-    question_list = GetQuestionIndexlist(url,random.choice(HEADERS))
-    question_links = []
-    for each in question_list:
-        if each[3] == u'0个':
-            break
-        question_links.append(each[2])
-    print(len(question_links))
+    Page = 10
+    for i in range(Page):
+        url = 'http://china.findlaw.cn/ask/d201801_t00_page' + str(i+1) +'/'
+        question_list = GetQuestionIndexlist(url,random.choice(HEADERS))
+        question_links = []
+        for each in question_list:
+            if each[3] == u'0个':
+                break
+            question_links.append(each[2])
 
-    lawyer_urllist = []
-    for each in  question_links:
-        if not(each is None):
-            lawyer_url = GetAnswers(each,random.choice(HEADERS))
-            try:
-                lawyer_urllist.append(lawyer_url[0][0][1])
-            except:
-                print(lawyer_url)
+        lawyer_urllist = []
+        for each in  question_links:
+            if not(each is None):
+                lawyer_url = GetAnswers(each,random.choice(HEADERS))
+                try:
+                    lawyer_urllist.append(lawyer_url[0][0][1])
+                except:
+                    print('something wrong' + lawyer_url)
 
-    print(len(lawyer_urllist))
-
-    for each in lawyer_urllist:
-        lawyer = GetLawyer(each + url2,random.choice(HEADERS))
-        for m in lawyer:
-            print(m)
+        lawyers = []
+        for each in lawyer_urllist:
+            lawyer = GetLawyer(each + url2,random.choice(HEADERS))
+            lawyers.append(lawyer)
+            content = json.dumps(lawyer,ensure_ascii=False) + '\n'
+            WriteDate(content,'Lawyers_v1.0.txt')
 
 
 num = 0
