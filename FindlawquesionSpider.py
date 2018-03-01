@@ -5,6 +5,7 @@ import random
 import requests
 import json
 import codecs
+import threading
 from lxml import etree
 
 HEADERS = [{'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 '
@@ -63,42 +64,64 @@ def GetQuestionIndexlist(url,headers,proxies='*'):
         #print('******页面信息获取失败 链接：%s'% url)
         #WriteDate(url + '\n','FailedPageLinklist.txt')
 
+class GetAnswersThread(threading.Thread):
+    def __init__(self,threadId,url,headers,proxies):
+        threading.Thread.__init__(self)
+        self.threadId = threadId
+        self.url = url
+        self.headers = headers
+        self.proxies = proxies
 
-def GetAnswers(url,headers,proxies='*'):
-
-    try:
-        if proxies == '*':
-            html = requests.get(url, headers=headers).content.decode('utf-8', 'ignore')
-        else:
-            try:
-                html = requests.get(url, headers=headers, proxies=proxies).content.decode('utf-8', 'ignore')
-            except:
+    #def GetAnswers(url,headers,proxies='*'):
+    def run(self):
+        url = self.url
+        headers = self.headers
+        proxies = self.proxies
+        global num
+        global num2
+        print('正在处理 %s',self.threadId)
+        try:
+            if proxies == '*':
                 html = requests.get(url, headers=headers).content.decode('utf-8', 'ignore')
-        html = etree.HTML(html)
+            else:
+                try:
+                    html = requests.get(url, headers=headers, proxies=proxies).content.decode('utf-8', 'ignore')
+                except:
+                    html = requests.get(url, headers=headers).content.decode('utf-8', 'ignore')
+            html = etree.HTML(html)
 
-        yzm = html.xpath('//p[@class="input"]/img[@class="yzm-pic"]')
-        if len(yzm) == 1:
-            print(url)
-            a = raw_input('请输入验证码')
-            print(a)
-        #获取律师信息
-        question_detail = html.xpath('//p[@class="question-text"]/text()')
-        question_create_date = html.xpath('//span[@class="tip-item"][2]/text()')
-        adress = html.xpath('//span[@class="tip-item"][3]/text()')
-        category = html.xpath('//span[@class="tip-item"][4]/text()')
-        answer = html.xpath('//div[@class="lawyer-answer"]/div[@class="answer-main"]'
-                            '/div[@class="answer-text"]/text()[1]')
-        lawyer = html.xpath('//div[@class="lawyer-answe r"]/div[@class="lawyer-info"]/div[@class="info"]'
-                            '/p/a[@class="info-name-link"]/text()')
-        lawyer_link = html.xpath('//div[@class="lawyer-answer"]/div[@class="lawyer-info"]/div[@class="info"]'
-                                 '/p/a[@class="info-name-link"]/@href')
-        answers = zip(lawyer_link,answer)
-        question = zip([url],question_detail,question_create_date,adress,category)
-        result = [answers,question]
-        return(result)
-    except:
-        print('******页面信息获取失败 链接：%s' % url)
-        WriteDate(url + '\n', 'FailedAnswerLinklist.txt')
+            yzm = html.xpath('//p[@class="input"]/img[@class="yzm-pic"]')
+            if len(yzm) == 1:
+                print(url)
+                a = raw_input('请输入验证码')
+                print(a)
+            #获取律师信息
+            question_detail = html.xpath('//p[@class="question-text"]/text()')
+            question_create_date = html.xpath('//span[@class="tip-item"][2]/text()')
+            adress = html.xpath('//span[@class="tip-item"][3]/text()')
+            category = html.xpath('//span[@class="tip-item"][4]/text()')
+            answer = html.xpath('//div[@class="lawyer-answer"]/div[@class="answer-main"]'
+                                '/div[@class="answer-text"]/text()[1]')
+            lawyer = html.xpath('//div[@class="lawyer-answe r"]/div[@class="lawyer-info"]/div[@class="info"]'
+                                '/p/a[@class="info-name-link"]/text()')
+            lawyer_link = html.xpath('//div[@class="lawyer-answer"]/div[@class="lawyer-info"]/div[@class="info"]'
+                                     '/p/a[@class="info-name-link"]/@href')
+            answers = zip(lawyer_link,answer)
+            question = zip([url],question_detail,question_create_date,adress,category)
+            result = [answers,question]
+
+            content = json.dumps(result, ensure_ascii=False) + '\n'
+            WriteDate(content, 'Answerlist_v3.1.json')
+            mutex.acquire(1)
+            num += 1
+            percent = float(count) / num2 * 100
+            mutex.release()
+            print(content)
+            print('已处理%d条数据，进度: %d' % (num, percent))
+            #return(result)
+        except:
+            print('******页面信息获取失败 链接：%s' % url)
+            WriteDate(url + '\n', 'FailedAnswerLinklist.txt')
 
 
 def GetLawyer(url,headers):
@@ -287,6 +310,7 @@ def main():
    """
 num = 0
 TIME = [5.8,2.7,3,1.5,3.9,6.1,2.6,2.9,3.9]
+mutex = threading.Lock()
 """
 question_list = ReadDate('Question_list_v1.0.txt')
 question_list = set(question_list)
@@ -306,27 +330,50 @@ question_links = json.loads(question_links)
 
 num2 = len(question_links)
 count = 0
-BEGINNUM = 7848
+BEGINNUM = 8209
 ENDNUM = num2
-url_proxies = 'https://www.kuaidaili.com/free/intr/1/'
-proxies_clear = []
-#proxies_clear = GetProxies(url_proxies,random.choice(HEADERS))
-proxies_clear = proxies_clear +  ['*','*','*']
-print(proxies_clear)
-for each in question_links:
+url1 = 'https://www.kuaidaili.com/free/intr/1/'
+url2 = 'https://www.kuaidaili.com/free/intr/2/'
+url3 = 'https://www.kuaidaili.com/free/intr/3/'
+proxies_clear = [{'http': 'http://113.76.96.51:9797'}]
+proxies_clear = GetProxies(url1,random.choice(HEADERS)) + GetProxies(url2,random.choice(HEADERS)) + \
+                GetProxies(url3,random.choice(HEADERS))
+
+proxies_clear = proxies_clear +  ['*']
+
+
+for i in range(0,len(question_links),len(proxies_clear)):
     count += 1
     print(count)
     if count > BEGINNUM and count < ENDNUM:
-        print('***正在获取咨询回复***')
-        print(each)
-        answer_list = GetAnswers(each,random.choice(HEADERS),random.choice(proxies_clear))
-        content = json.dumps(answer_list,ensure_ascii=False) + '\n'
-        WriteDate(content,'Answerlist_v3.1.json')
-        num += 1
-        percent = float(count)/num2*100
-        print('已处理%d条数据，进度: %d' % (num,percent))
-        time.sleep(random.choice(TIME))
+        GetAnswersThreadList = []
+        for each1 in proxies_clear:
+            GetAnswersThreadList.append(GetAnswersThread(question_links[i],question_links[i],random.choice(HEADERS),each1))
+            i += 1
+
+        for each in GetAnswersThreadList:
+            each.start()
+
+        for each in GetAnswersThreadList:
+            each.join()
+            times.sleep(10000)
+
+
+
+
+
+            """
+            print('***正在获取咨询回复***')
+            print(each)
+            answer_list = GetAnswers(each,random.choice(HEADERS),each1)
+            content = json.dumps(answer_list,ensure_ascii=False) + '\n'
+            WriteDate(content,'Answerlist_v3.1.json')
+            num += 1
+            percent = float(count)/num2*100
+            print('已处理%d条数据，进度: %d' % (num,percent))
+            #time.sleep(random.choice(TIME))
         time.sleep(0.2)
+            """
 
 """
         question_links = []
