@@ -28,9 +28,20 @@ HEADERS = [{'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.
            {'User-Agent': 'Mozilla/5.0 (Linux; U; Android 3.0; en-us; Xoom Build/HRI39) AppleWebKit/534.13 '
                           '(KHTML, like Gecko) Version/4.0 Safari/534.13'}]
 
-def GetQuestionIndexlist(url,headers):
+PROXIES = [{"http": "http://202.109.237.35:80"},
+           {"http": "http://112.80.255.21:80"},
+           {"http": "http://153.3.235.82:80"},
+           {"http": "http://115.239.210.42:80"},]
+
+def GetQuestionIndexlist(url,headers,proxies='*'):
     #try:
-    html = requests.get(url,headers=headers).content.decode('utf-8','ignore')
+    if proxies == '*':
+        html = requests.get(url,headers=headers).content.decode('utf-8','ignore')
+    else:
+        try:
+            html = requests.get(url,headers=headers,proxies=proxies).content.decode('utf-8','ignore')
+        except:
+            html = requests.get(url, headers=headers).content.decode('utf-8', 'ignore')
     html = etree.HTML(html)
 
     yzm = html.xpath('//p[@class="input"]/img[@class="yzm-pic"]')
@@ -57,10 +68,16 @@ def GetQuestionIndexlist(url,headers):
         #WriteDate(url + '\n','FailedPageLinklist.txt')
 
 
-def GetAnswers(url,headers):
+def GetAnswers(url,headers,proxies='*'):
 
     #try:
-    html = requests.get(url, headers=headers).content.decode('utf-8', 'ignore')
+    if proxies == '*':
+        html = requests.get(url, headers=headers).content.decode('utf-8', 'ignore')
+    else:
+        try:
+            html = requests.get(url, headers=headers, proxies=proxies).content.decode('utf-8', 'ignore')
+        except:
+            html = requests.get(url, headers=headers).content.decode('utf-8', 'ignore')
     html = etree.HTML(html)
 
     yzm = html.xpath('//p[@class="input"]/img[@class="yzm-pic"]')
@@ -79,9 +96,7 @@ def GetAnswers(url,headers):
                         '/p/a[@class="info-name-link"]/text()')
     lawyer_link = html.xpath('//div[@class="lawyer-answer"]/div[@class="lawyer-info"]/div[@class="info"]'
                              '/p/a[@class="info-name-link"]/@href')
-
-
-    answers = zip(lawyer,lawyer_link,answer)
+    answers = zip(lawyer_link,answer)
     question = zip([url],question_detail,question_create_date,adress,category)
     result = [answers,question]
     return(result)
@@ -229,13 +244,22 @@ def GetLawyer(url,headers):
         print('******页面信息获取失败 链接：%s' % url)
         WriteDate(url, 'FailedLawyerlist.txt')
 '''
+
+
 def WriteDate(content,filename):
-    with codecs.open(filename,'a+',encoding= "utf-8") as f:
+    with codecs.open(filename,'a+',encoding = "utf-8") as f:
         f.write(content)
 
+def ReadDate(filename):
+    result = []
+    with codecs.open(filename,'r',encoding = "utf-8") as f:
+        for line in f.readlines():
+            result.append(line)
+    return(result)
+
+
 def main():
-
-
+    """
     url2 = '/lawyer/onlinelawyer.html'
     Page = 3875
     TIME = [1,2.6,3,0.5,10.8,8.2,6.9]
@@ -250,6 +274,33 @@ def main():
         question_list_data = json.dumps(question_list,ensure_ascii = False) + u'\n'
         WriteDate(question_list_data,'Question_list_v1.0.txt')
         time.sleep(random.choice(TIME))
+
+   """
+num = 0
+TIME = [1,2.6,3,0.5,10.8,8.2,6.9]
+question_list = ReadDate('Question_list_v1.0.txt')
+question_list = set(question_list)
+
+question_links = []
+for each in question_list:
+    each = json.loads(each,encoding = 'utf-8')
+    for each2 in each:
+        if len(each2) ==5:
+            question_links.append(each2[2])
+content = json.dumps(question_links,ensure_ascii = False)
+#WriteDate(content,'Qestion_link_listv2.0.')
+num2 = len(question_links)
+print(num2)
+for each in question_links:
+    print('***正在获取咨询回复***')
+    print(each)
+    answer_list = GetAnswers(each,random.choice(HEADERS))
+    content = json.dumps(answer_list,ensure_ascii=False) + '\n'
+    WriteDate(content,'Answerlist.json')
+    num += 1
+    percent = float(num)/num2*100
+    print('已处理%d条数据，进度: %d' % (num,percent))
+    time.sleep(random.choice(TIME))
 
 """
         question_links = []
