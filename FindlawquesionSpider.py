@@ -286,7 +286,7 @@ def main():
 
    """
 num = 0
-TIME = [1,2.6,3,1.5,6.9,2.1,1.6,1.9,3.2]
+TIME = [5.8,2.7,3,1.5,3.9,6.1,2.6,2.9,3.9]
 """
 question_list = ReadDate('Question_list_v1.0.txt')
 question_list = set(question_list)
@@ -306,10 +306,12 @@ question_links = json.loads(question_links)
 
 num2 = len(question_links)
 count = 0
-BEGINNUM = 3613
+BEGINNUM = 7848
 ENDNUM = num2
 url_proxies = 'https://www.kuaidaili.com/free/intr/1/'
-proxies_clear = GetProxies(url_proxies,random.choice(HEADERS))
+proxies_clear = []
+#proxies_clear = GetProxies(url_proxies,random.choice(HEADERS))
+proxies_clear = proxies_clear +  ['*','*','*']
 print(proxies_clear)
 for each in question_links:
     count += 1
@@ -323,7 +325,8 @@ for each in question_links:
         num += 1
         percent = float(count)/num2*100
         print('已处理%d条数据，进度: %d' % (num,percent))
-        #time.sleep(random.choice(TIME))
+        time.sleep(random.choice(TIME))
+        time.sleep(0.2)
 
 """
         question_links = []

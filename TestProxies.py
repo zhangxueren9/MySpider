@@ -29,25 +29,36 @@ HEADERS = [{'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.
                           '(KHTML, like Gecko) Version/4.0 Safari/534.13'}]
 
 url = 'http://china.findlaw.cn/ask/question_43355287.html'
-PROXIES = [{"http": "http://202.109.237.35:80"},
-           {"http": "http://112.80.255.21:80"},
-           {"http": "http://153.3.235.82:80"},
-           {"http": "http://115.239.210.42:80"},
-            {"http": "http://202.109.237.36:80"},
 
-           ]
-headers = random.choice(HEADERS)
-num = 0
-for i in range(10000):
-    proxies = PROXIES[3]
-    print(proxies)
-    html = requests.get(url, headers=headers,proxies = proxies).content.decode('utf-8', 'ignore')
+def GetProxies(url,headers):
+    html = requests.get(url, headers=headers).content.decode('utf-8', 'ignore')
     html = etree.HTML(html)
-    num += 1
-    yzm = html.xpath('//p[@class="input"]/img[@class="yzm-pic"]')
-    if len(yzm) == 1:
-        print(url)
-        a = raw_input('请输入验证码')
-        print(a)
+    proxies = html.xpath(u'//td[@data-title="IP"]/text() | //td[@data-title="PORT"]/text() | //td[@data-title="类型"]/text()')
+    print(len(proxies))
+    result = []
+    for i in range(0,len(proxies),3):
 
-    print(num)
+        a = {proxies[i+2].lower() : "http://" + proxies[i] + ":" + proxies[i+1]}
+        #print(a)
+        result.append(a)
+
+    return (result)
+
+num = 0
+url = 'https://www.kuaidaili.com/free/intr/1/'
+headers = random.choice(HEADERS)
+
+proxies_all = GetProxies(url,headers)
+print(len(proxies_all))
+avaiable_proxies = []
+for each in proxies_all:
+    print('正在测试 %s 代理'%each)
+    for i in range(1):
+        proxies = each
+        headers = random.choice(HEADERS)
+
+        html = requests.get(url, headers=headers,proxies = proxies).content.decode('utf-8', 'ignore')
+        html = etree.HTML(html)
+    num += 1
+    print('可用')
+print(num)
